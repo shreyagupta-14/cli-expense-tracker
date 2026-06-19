@@ -5,8 +5,8 @@
 # 1. INITIALIZE DATA STRUCTURES
 # An empty list to hold our expense records. Each record will be a 
 # dictionary: {"date": str, "category": str, "amount": float, "description": str}
-INITIALIZE expense_list AS AN EMPTY LIST
-INITIALIZE categories AS A LIST OF STRINGS ["Food", "Transport", "Leisure", "Bills", "Other"]
+#INITIALIZE expense_list AS AN EMPTY LIST
+#INITIALIZE categories AS A LIST OF STRINGS ["Food", "Transport", "Leisure", "Bills", "Other"]
 
 # 2. DEFINE CORE FUNCTIONS
 '''
