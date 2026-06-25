@@ -1,76 +1,103 @@
-# =====================================================================
-# CLI EXPENSE TRACKER - INITIAL ARCHITECTURE SPEC
-# =====================================================================
+import json
+import os
 
-# 1. INITIALIZE DATA STRUCTURES
-# An empty list to hold our expense records. Each record will be a 
-# dictionary: {"date": str, "category": str, "amount": float, "description": str}
-#INITIALIZE expense_list AS AN EMPTY LIST
-#INITIALIZE categories AS A LIST OF STRINGS ["Food", "Transport", "Leisure", "Bills", "Other"]
+from datetime import datetime
+#Blueprint for single item
+class Expense:
+    def __init__(self,expense_id, name, amount , category, date = None):
+        self.expense_id = expense_id
+        self.name= name
+        self.category = category
+        self.amount = amount
+        self.date = date if date else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-# 2. DEFINE CORE FUNCTIONS
-'''
-FUNCTION add_expense():
-    PRINT "--- Add New Expense ---"
-    INPUT amount AS FLOAT
-    INPUT category AS STRING
-    INPUT description AS STRING
-    GET current_date AS STRING (or input manually)
+
+    def to_dict(self):
+        # Convert this object's data into a standard Python dictionary
+        return {
+            "id" : self.expense_id,
+            "name" : self.name,
+            "category": self.category,
+            "amount": self.amount,
+            "date": self.date
+        } 
+
+#Manager - manages collection of expenses
+class ExpenseTracker:
+    def __init__(self, filename= "expenses.json"):
+        self.filename = filename
+
+        if not os.path.exists(self.filename):
+            with open(self.filename, 'w')as file:
+                json.dump([], file)
     
-    # Validation check
-    IF category NOT IN categories:
-        PRINT "Invalid category! Defaulting to 'Other'."
-        SET category = "Other"
+    def load_raw_data(self):
+        with open (self.filename, 'r') as file:
+            return json.load(file)
     
-    # Create the record dictionary
-    CREATE expense_record = {
-        "date": current_date,
-        "category": category,
-        "amount": amount,
-        "description": description
-    }
-    
-    APPEND expense_record TO expense_list
-    PRINT "Expense added successfully!"
+    def save_raw_data(self, data):
+        with open (self.filename, 'w') as file:
+            json.dump(data, file, indent=4)
 
-
-FUNCTION view_expenses():
-    PRINT "--- All Expense Records ---"
-    IF expense_list IS EMPTY:
-        PRINT "No expenses recorded yet."
-        RETURN
+    def add_expense( self, name, amount, category):
+        data= self.load_raw_data()
         
-    FOR each record IN expense_list:
-        PRINT record["date"] | record["category"] | record["amount"] | record["description"]
+        if len(data) == 0:
+            next_id =1
+        else:
+            next_id = data[-1]['id'] + 1
 
+        # Creating new instance of Expense
+        new_expense = Expense(next_id, name, amount, category) 
+        data.append(new_expense.to_dict())
 
-FUNCTION calculate_total():
-    INITIALIZE total = 0.0
-    FOR each record IN expense_list:
-        total = total + record["amount"]
-    PRINT "Total Amount Spent: " + total
-
-
-# 3. MAIN APPLICATION LOOP (CLI MENU INTERFACE)
-
-LOOP FOREVER:
-    PRINT "\n===== EXPENSE TRACKER MENU ====="
-    PRINT "1. Add an Expense"
-    PRINT "2. View All Expenses"
-    PRINT "3. Show Total Spending"
-    PRINT "4. Exit"
+        self.save_raw_data(data)
+        print(f"💰 Expense added successfully! (ID: {next_id})")
     
-    INPUT user_choice AS STRING
+    def view_expense(self, category = None):
+        data = self.load_raw_data()
+
+        for item in data:
+            if item['category'] == category.lower:
+                return(item)
+            
+    def get_total(self, month = None):
+        data= self.load_raw_data()
+        total_amount = 0
+        
+        month_map = {
+            "january": "-01-", "february": "-02-", "march": "-03-", 
+            "april": "-04-", "may": "-05-", "june": "-06-", 
+            "july": "-07-", "august": "-08-", "september": "-09-", 
+            "october": "-10-", "november": "-11-", "december": "-12-"
+        }
+
+        target_pattern = None
+        if month:
+            target_pattern = month_map.get(month.lower())
+            if not target_pattern:
+                print(f"⚠️ Warning: '{month}' is not a valid month name.")
+                return 0
+            
+        for item in data:
+            if target_pattern is None:
+                total_amount += item['amount']
+            else:
+                if target_pattern in item['date']:
+                    total_amount += item['amount']
+        return total_amount
     
-    IF user_choice == "1":
-        CALL add_expense()
-    ELSE IF user_choice == "2":
-        CALL view_expenses()
-    ELSE IF user_choice == "3":
-        CALL calculate_total()
-    ELSE IF user_choice == "4":
-        PRINT "Exiting application. Goodbye!"
-        BREAK LOOP
-    ELSE:
-        PRINT "Invalid option selected. Please try again."
-'''
+    def delete_expense(self, expense_id):
+        data= self.load_raw_data()
+
+        id_exists = any(item['id'] == expense_id for item in data)
+
+        if not id_exists:
+            print(f"❌ Error: ID {expense_id} doesn't exist.")
+            return
+        
+        updated_data = (item for item in data if item['id'] != expense_id) 
+        self.save_raw_data(updated_data)
+        print(f"🗑️ Expense ID {expense_id} deleted successfully!")
+
+
