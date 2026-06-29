@@ -54,15 +54,31 @@ class ExpenseTracker:
         self.save_raw_data(data)
         print(f"💰 Expense added successfully! (ID: {next_id})")
     
-    def view_expense(self, category = None):
+
+    def view_expense(self, category=None):
         data = self.load_raw_data()
 
-        for item in data:
-            if item['category'] == category.lower:
-                return(item)
+        if not data:
+            print("📭 No expenses recorded yet!")
+            return
+
+        if category is not None:
+            existing_categories = {item['category'].lower() for item in data}
             
-    def get_total(self, month = None):
-        data= self.load_raw_data()
+            if category.lower() not in existing_categories:
+                print(f"⚠️  Warning: Category '{category}' does not exist.")
+                print("📋 Showing entire dataset instead:\n")
+                category = None  # Reset to None so the loop below prints everything
+
+        for item in data:
+            if category is None:
+                print(f"ID: {item['id']} | {item['date']} | {item['name']} | ₹{item['amount']} [{item['category']}]")
+            elif item['category'].lower() == category.lower():
+                print(f"ID: {item['id']} | {item['date']} | {item['name']} | ₹{item['amount']} [{item['category']}]")       
+
+
+    def get_total(self, month=None, category = None):
+        data = self.load_raw_data()
         total_amount = 0
         
         month_map = {
@@ -77,16 +93,27 @@ class ExpenseTracker:
             target_pattern = month_map.get(month.lower())
             if not target_pattern:
                 print(f"⚠️ Warning: '{month}' is not a valid month name.")
-                return 0
-            
+                print("📋 Ignoring Month filter and Calculating the overall grand total instead:\n")
+                target_pattern = None  # Resetting to None clears the filter!
+        
+        if category:
+            existing_categories = {item['category'].lower() for item in data}
+            if category.lower() not in existing_categories:
+                print(f"⚠️ Warning: '{category}' is not a valid month name.")
+                print("📋 Ignoring Category filter and Calculating the overall grand total instead:\n")
+                category = None
+
         for item in data:
-            if target_pattern is None:
+            matches_month = (target_pattern is None) or (target_pattern in item['date'])
+            
+            matches_category = (category is None) or (item['category'].lower() == category.lower())
+            
+            if matches_month and matches_category:
                 total_amount += item['amount']
-            else:
-                if target_pattern in item['date']:
-                    total_amount += item['amount']
+                    
         return total_amount
     
+
     def delete_expense(self, expense_id):
         data= self.load_raw_data()
 
@@ -96,8 +123,9 @@ class ExpenseTracker:
             print(f"❌ Error: ID {expense_id} doesn't exist.")
             return
         
-        updated_data = (item for item in data if item['id'] != expense_id) 
+        updated_data = [item for item in data if item['id'] != expense_id]
         self.save_raw_data(updated_data)
         print(f"🗑️ Expense ID {expense_id} deleted successfully!")
+
 
 
