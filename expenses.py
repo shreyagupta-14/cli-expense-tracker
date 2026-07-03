@@ -1,5 +1,6 @@
 import json
 import os
+import argparse
 
 from datetime import datetime
 #Blueprint for single item
@@ -99,7 +100,7 @@ class ExpenseTracker:
         if category:
             existing_categories = {item['category'].lower() for item in data}
             if category.lower() not in existing_categories:
-                print(f"⚠️ Warning: '{category}' is not a valid month name.")
+                print(f"⚠️ Warning: '{category}' is not a valid category name.")
                 print("📋 Ignoring Category filter and Calculating the overall grand total instead:\n")
                 category = None
 
@@ -127,5 +128,38 @@ class ExpenseTracker:
         self.save_raw_data(updated_data)
         print(f"🗑️ Expense ID {expense_id} deleted successfully!")
 
+if __name__ == "__main__":
+    tracker = ExpenseTracker()
+    parser = argparse.ArgumentParser(description="A CLI tool to track daily expenses and manage budgets.")
+    subparsers = parser.add_subparsers(dest = "command", required=True)
+    add_parser = subparsers.add_parser("add")
+    view_parser = subparsers.add_parser("view")
+    delete_parser = subparsers.add_parser("delete")
+    total_parser = subparsers.add_parser("total",help="Calculate the total spending with optional filters")
 
+    add_parser.add_argument("--name", nargs="+", help="The name or description of the expense (e.g., Lunch)")
+    add_parser.add_argument("--amount", required = True, type = float,help="The cost of the expense (numeric value)" )   
+    add_parser.add_argument("--category", default = "General", help="The category tag for the expense (e.g., Food, Transport)")
 
+    view_parser.add_argument("--category")
+
+    delete_parser.add_argument("--id", required=True, type=int, help="The unique ID of the expense you want to remove")
+
+    total_parser.add_argument("--category", help="Filter the total by a specific category (e.g., Food)")
+    total_parser.add_argument("--month", help="Filter the total by a specific month (e.g., January or 01)")
+
+    args= parser.parse_args()
+
+    if args.command == "add":
+        clean_name = " ".join(args.name) if args.name else "Unnanmed"
+        tracker.add_expense(clean_name, args.amount, args.category)
+
+    elif args.command == "view":
+        tracker.view_expense(args.category)
+
+    elif args.command == "delete":
+        tracker.delete_expense(args.id)
+    
+    elif args.command == "total":
+        total = tracker.get_total(category = args.category, month= args.month)
+        print(f"📊 Total Expenses: ₹{total}")
